@@ -8,7 +8,7 @@ Rather than guessing at schedules or inventing service where none is confirmed, 
 
 **Feasibility-spike stage.** The project's first milestone is proving that a small, manually verified set of real Cape Town journeys can be routed correctly, before any database, frontend, or public deployment is built.
 
-The software half of that spike now passes: an explicitly synthetic test network builds and routes correctly through a real, pinned OpenTripPlanner 2.9.0 instance ([details](docs/FEASIBILITY-RESULTS.md)). **No real Cape Town journey has been validated, and no route data has been published** — that requires resolved data-use rights and field-verified evidence that don't exist yet. See [docs/MVP-SPEC.md](docs/MVP-SPEC.md) for the exact gates that must pass before that claim can be made.
+The software half of that spike now passes: an explicitly synthetic test network builds and routes correctly through a real, pinned OpenTripPlanner 2.9.0 instance ([details](docs/FEASIBILITY-RESULTS.md)). **No real Cape Town journey has been validated, and no route data has been published.** That requires resolved data-use rights and field-verified evidence that don't exist yet. See [docs/MVP-SPEC.md](docs/MVP-SPEC.md) for the exact gates that must pass before that claim can be made.
 
 ## How it's meant to work
 
@@ -18,6 +18,18 @@ The software half of that spike now passes: an explicitly synthetic test network
 - **Files first, database later.** The feasibility spike works entirely with files. PostGIS is introduced only after real-data feasibility is proven.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full component breakdown and boundaries, and [docs/ADR.md](docs/ADR.md) for the decisions behind them.
+
+## Run the tests
+
+Needs Python 3.13 or newer. The tests use only the synthetic fixture and need no network, Java or OTP download.
+
+```bash
+cd spikes/feasibility
+python -m pip install -e ".[dev]"
+python -m pytest
+```
+
+The full smoke check (`python -m taxigraph_spike check --mode smoke`) also needs Java and the pinned tools; see [spikes/feasibility/README.md](spikes/feasibility/README.md).
 
 ## Documentation
 
