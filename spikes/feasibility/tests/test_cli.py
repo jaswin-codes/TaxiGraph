@@ -81,3 +81,11 @@ def test_real_mode_blocked_with_malformed_manifest(tmp_path: Path, content):
     assert exit_code == 2
     data = json.loads((cli.OUT_DIR / "real-report.json").read_text(encoding="utf-8"))
     assert data["real_data_status"] == "data_blocked"
+
+
+def test_run_smoke_uses_base_dir_for_inputs_and_outputs(tmp_path: Path):
+    # An empty base_dir has no tools-manifest.json, so the run is blocked after the GTFS export.
+    result = cli.run_smoke(tmp_path)
+
+    assert result.software_status == "blocked"
+    assert (tmp_path / "out" / "gtfs" / "feed.zip").is_file()
