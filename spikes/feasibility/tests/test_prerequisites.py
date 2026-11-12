@@ -91,3 +91,14 @@ def test_run_prerequisite_checks_reads_manifest(tmp_path: Path, monkeypatch):
     assert report.ok is False
     names = [c.name for c in report.checks]
     assert "tool:otp" in names
+
+
+def test_check_tool_artifact_checksum_ok_when_pinned_uppercase(tmp_path: Path):
+    tool_path = tmp_path / "local" / "tools" / "thing.jar"
+    tool_path.parent.mkdir(parents=True)
+    tool_path.write_bytes(b"fake jar bytes")
+    pinned = prerequisites._sha256_of(tool_path).upper()  # as printed by PowerShell's Get-FileHash
+
+    spec = {"local_path": "local/tools/thing.jar", "sha256": pinned}
+    result = prerequisites.check_tool_artifact("thing", spec, tmp_path)
+    assert result.ok is True
