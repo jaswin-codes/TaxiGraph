@@ -66,3 +66,9 @@ def test_zip_contains_all_tables(tmp_path: Path, network):
 def test_id_map_written(tmp_path: Path, network):
     result = gtfs_export.build_gtfs(network, tmp_path / "gtfs")
     assert result.id_map_path.is_file()
+
+
+def test_unknown_service_day_name_is_rejected(tmp_path: Path, network):
+    network["service"]["days"] = ["Mon", "tuesday"]
+    with pytest.raises(ValueError, match="Mon"):
+        gtfs_export.build_gtfs(network, tmp_path / "gtfs")

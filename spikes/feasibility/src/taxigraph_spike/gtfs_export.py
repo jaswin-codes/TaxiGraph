@@ -28,6 +28,7 @@ GTFS_TABLES = (
     "feed_info.txt",
 )
 
+WEEKDAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
 ROUTE_TYPE_TAXI_PROXY = 3  # GTFS route_type 3 = bus; no dedicated informal-taxi type exists.
 FEED_ID = "SYN"  # Explicit rather than relying on OTP's positional default ("1").
 
@@ -108,18 +109,10 @@ def build_gtfs(network: dict[str, Any], out_dir: Path) -> GtfsExportResult:
     )
 
     service = network["service"]
-    day_flags = {
-        day: ("1" if day in service["days"] else "0")
-        for day in (
-            "monday",
-            "tuesday",
-            "wednesday",
-            "thursday",
-            "friday",
-            "saturday",
-            "sunday",
-        )
-    }
+    unknown_days = set(service["days"]) - set(WEEKDAYS)
+    if unknown_days:
+        raise ValueError(f"service days must be lowercase weekday names, got {sorted(unknown_days)}")
+    day_flags = {day: ("1" if day in service["days"] else "0") for day in WEEKDAYS}
     _write_csv(
         out_dir / "calendar.txt",
         ["service_id", *day_flags.keys(), "start_date", "end_date"],
