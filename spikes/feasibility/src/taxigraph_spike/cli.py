@@ -105,11 +105,12 @@ def run_smoke(base_dir: Path = BASE_DIR) -> report.CheckReport:
             details=details,
         )
 
-    proc = otp_runner.start_server(otp_jar, graph_dir, java_binary=java_binary)
+    server_log = OUT_DIR / "otp-server.log"
+    proc = otp_runner.start_server(otp_jar, graph_dir, server_log, java_binary=java_binary)
     try:
-        ready = otp_runner.wait_for_ready(f"http://localhost:{otp_runner.LOOPBACK_PORT}")
+        ready = otp_runner.wait_for_ready(f"http://localhost:{otp_runner.LOOPBACK_PORT}", proc=proc)
         if not ready:
-            details["otp_server"] = "did not become ready"
+            details["otp_server"] = f"did not become ready; see {server_log}"
             return report.CheckReport(
                 mode="smoke",
                 software_status=report.STATUS_FAIL,
