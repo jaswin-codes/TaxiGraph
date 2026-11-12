@@ -69,3 +69,15 @@ def test_real_mode_blocked_with_incomplete_manifest(tmp_path: Path):
     assert data["real_data_status"] == "data_blocked"
     assert data["details"]["manifest_validation"]["status"] == "data_blocked"
     assert "source_rights_reference" in data["details"]["manifest_validation"]["missing"]
+
+
+@pytest.mark.parametrize("content", ["{not json", "[]"])
+def test_real_mode_blocked_with_malformed_manifest(tmp_path: Path, content):
+    manifest_path = tmp_path / "real-manifest.json"
+    manifest_path.write_text(content, encoding="utf-8")
+
+    exit_code = cli.main(["check", "--mode", "real", "--manifest", str(manifest_path)])
+
+    assert exit_code == 2
+    data = json.loads((cli.OUT_DIR / "real-report.json").read_text(encoding="utf-8"))
+    assert data["real_data_status"] == "data_blocked"

@@ -68,3 +68,26 @@ def test_too_few_evaluation_cases():
     validation = real_manifest.validate_real_manifest(manifest)
     assert validation.status == "data_blocked"
     assert any("evaluation_cases" in m for m in validation.missing)
+
+
+def test_non_object_manifest_is_data_blocked():
+    for bad in ([], "text", None, 3):
+        validation = real_manifest.validate_real_manifest(bad)
+        assert validation.status == "data_blocked"
+
+
+def test_non_object_entries_are_reported_not_raised():
+    manifest = _complete_manifest()
+    manifest["directed_variants"][0] = "R1"
+    manifest["evaluation_cases"][0] = None
+    validation = real_manifest.validate_real_manifest(manifest)
+    assert validation.status == "data_blocked"
+    assert "directed_variants[0]: must be an object" in validation.missing
+    assert "evaluation_cases[0]: must be an object" in validation.missing
+
+
+def test_non_list_fields_are_reported_not_raised():
+    manifest = _complete_manifest()
+    manifest["directed_variants"] = "three variants"
+    validation = real_manifest.validate_real_manifest(manifest)
+    assert "directed_variants: must be a list" in validation.missing

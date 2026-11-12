@@ -157,8 +157,10 @@ def run_smoke(base_dir: Path = BASE_DIR) -> report.CheckReport:
 def run_real(manifest_path: Path, base_dir: Path = BASE_DIR) -> report.CheckReport:
     details: dict = {}
 
-    if not manifest_path.is_file():
-        details["missing"] = [f"manifest file not found at {manifest_path}"]
+    try:
+        manifest = real_manifest.load_manifest(manifest_path)
+    except (OSError, ValueError) as exc:  # missing file, unreadable file, invalid JSON or encoding
+        details["missing"] = [f"manifest unreadable at {manifest_path}: {exc}"]
         return report.CheckReport(
             mode="real",
             software_status=report.STATUS_NOT_RUN,
@@ -168,7 +170,6 @@ def run_real(manifest_path: Path, base_dir: Path = BASE_DIR) -> report.CheckRepo
             details=details,
         )
 
-    manifest = real_manifest.load_manifest(manifest_path)
     validation = real_manifest.validate_real_manifest(manifest)
     details["manifest_validation"] = {"status": validation.status, "missing": validation.missing}
 
