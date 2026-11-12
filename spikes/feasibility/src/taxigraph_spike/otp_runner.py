@@ -86,6 +86,7 @@ def build_graph(
 def start_server(
     jar_path: Path,
     graph_dir: Path,
+    log_path: Path,
     java_binary: str = "java",
     heap: str = "-Xmx2G",
     port: int = LOOPBACK_PORT,
@@ -100,14 +101,21 @@ def start_server(
         "--port",
         str(port),
     ]
-    return popen_hidden(args)
+    return popen_hidden(args, log_path)
 
 
-def wait_for_ready(base_url: str, timeout_seconds: int = 120, poll_interval_seconds: float = 2.0) -> bool:
+def wait_for_ready(
+    base_url: str,
+    timeout_seconds: int = 120,
+    poll_interval_seconds: float = 2.0,
+    proc: subprocess.Popen | None = None,
+) -> bool:
     """Poll until something is listening on base_url.
 
     Any HTTP response (even an error status like 404/405) proves the server
-    is up; only a failure to connect at all means it isn't ready yet.
+    is up; only a failure to connect at all means it isn't ready yet. If
+    `proc` is given and has exited, give up at once: whatever answers on the
+    port is not our server.
     """
 
     import urllib.error
@@ -115,6 +123,8 @@ def wait_for_ready(base_url: str, timeout_seconds: int = 120, poll_interval_seco
 
     deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline:
+        if proc is not None and proc.poll() is not None:
+            return False
         try:
             with urllib.request.urlopen(base_url, timeout=5):
                 return True

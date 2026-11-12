@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from pathlib import Path
 
 
 def _creation_flags() -> int:
@@ -29,13 +30,18 @@ def run_hidden(args: list[str], timeout: int | None = None) -> subprocess.Comple
     )
 
 
-def popen_hidden(args: list[str]) -> subprocess.Popen:
-    return subprocess.Popen(
-        args,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        creationflags=_creation_flags(),
-    )
+def popen_hidden(args: list[str], log_path: Path) -> subprocess.Popen:
+    """Start a long-running child with stdout+stderr going to log_path.
+
+    Unread PIPEs would fill up and block a chatty server such as OTP, so the
+    output goes to a file instead. The child keeps its own handle open.
+    """
+
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with log_path.open("wb") as log:
+        return subprocess.Popen(
+            args,
+            stdout=log,
+            stderr=subprocess.STDOUT,
+            creationflags=_creation_flags(),
+        )
