@@ -24,6 +24,19 @@ PLAN_QUERY_PATH = BASE_DIR / "queries" / "plan-query.graphql"
 SOFT_OPTIONAL_TOOLS = {"tool:osm_extract"}
 
 
+def _post_plan_query(query: str, variables: dict) -> dict:
+    """Return OTP's data, or raise so evaluate_cases records the case as an error.
+
+    An empty dict would be scored as "no_journey", letting negative controls
+    pass while OTP is down or the schema has drifted.
+    """
+
+    result = post_query(GRAPHQL_URL, query, variables)
+    if result.status != "ok" or result.data is None:
+        raise RuntimeError(f"{result.status}: {result.errors}")
+    return result.data
+
+
 def run_smoke(base_dir: Path = BASE_DIR) -> report.CheckReport:
     details: dict = {}
 
@@ -110,11 +123,7 @@ def run_smoke(base_dir: Path = BASE_DIR) -> report.CheckReport:
         details["introspection_status"] = introspection.status
 
         cases = network["positive_cases"] + network["negative_controls"]
-        eval_result = evaluation.evaluate_cases(
-            PLAN_QUERY_PATH,
-            lambda query, variables: post_query(GRAPHQL_URL, query, variables).data or {},
-            cases,
-        )
+        eval_result = evaluation.evaluate_cases(PLAN_QUERY_PATH, _post_plan_query, cases)
         details["evaluation"] = {
             "status": eval_result.status,
             "detail": eval_result.detail,

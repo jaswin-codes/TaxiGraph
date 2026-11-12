@@ -1,7 +1,29 @@
 import json
 from pathlib import Path
 
-from taxigraph_spike import cli, prerequisites
+import pytest
+
+from taxigraph_spike import cli, evaluation, prerequisites
+from taxigraph_spike.graphql_client import GraphQLResult
+
+
+@pytest.mark.parametrize("status", ["graphql_error", "otp_unavailable"])
+def test_otp_errors_do_not_pass_negative_controls(monkeypatch, tmp_path: Path, status):
+    monkeypatch.setattr(cli, "post_query", lambda *a, **k: GraphQLResult(status, errors=[{"message": "boom"}]))
+    query_path = tmp_path / "plan-query.graphql"
+    query_path.write_text("query Plan { planConnection { edges { node { start } } } }")
+    negative = {
+        "id": "neg",
+        "origin_stop_id": "SYN_STOP_3",
+        "destination_stop_id": "SYN_STOP_1",
+        "expected_result": "no_journey",
+    }
+
+    result = evaluation.evaluate_cases(query_path, cli._post_plan_query, [negative])
+
+    assert result.status == "fail"
+    assert result.outcomes[0].actual_result == "error"
+    assert status in result.outcomes[0].detail
 
 
 def test_smoke_reports_blocked_when_java_missing(monkeypatch):
