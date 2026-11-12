@@ -49,7 +49,11 @@ def post_query(
             body = json.loads(response.read().decode("utf-8"))
     except (urllib.error.URLError, ConnectionError, TimeoutError) as exc:
         return GraphQLResult("otp_unavailable", errors=[{"message": str(exc)}])
+    except ValueError as exc:  # body was not valid UTF-8 JSON
+        return GraphQLResult("graphql_error", errors=[{"message": f"invalid response body: {exc}"}])
 
+    if not isinstance(body, dict):
+        return GraphQLResult("graphql_error", errors=[{"message": "response body is not a JSON object"}])
     if body.get("errors"):
         return GraphQLResult("graphql_error", data=body.get("data"), errors=body["errors"])
     return GraphQLResult("ok", data=body.get("data"))

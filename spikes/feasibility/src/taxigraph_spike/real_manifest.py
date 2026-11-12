@@ -70,21 +70,40 @@ def _require(container: dict[str, Any], fields: tuple[str, ...], prefix: str, mi
             missing.append(f"{prefix}{name}")
 
 
-def validate_real_manifest(manifest: dict[str, Any]) -> ManifestValidation:
+def _object_entries(manifest: dict[str, Any], key: str, missing: list[str]) -> list[tuple[int, dict[str, Any]]]:
+    """Return (index, object) pairs for a list field; anything else is recorded as missing."""
+
+    value = manifest.get(key) or []
+    if not isinstance(value, list):
+        missing.append(f"{key}: must be a list")
+        return []
+    entries = []
+    for index, item in enumerate(value):
+        if isinstance(item, dict):
+            entries.append((index, item))
+        else:
+            missing.append(f"{key}[{index}]: must be an object")
+    return entries
+
+
+def validate_real_manifest(manifest: Any) -> ManifestValidation:
+    if not isinstance(manifest, dict):
+        return ManifestValidation(status="data_blocked", missing=["manifest: must be a JSON object"])
+
     missing: list[str] = []
     _require(manifest, REQUIRED_TOP_LEVEL_FIELDS, "", missing)
 
-    variants = manifest.get("directed_variants") or []
+    variants = _object_entries(manifest, "directed_variants", missing)
     if not (3 <= len(variants) <= 5):
         missing.append(f"directed_variants: need 3-5, got {len(variants)}")
-    for index, variant in enumerate(variants):
+    for index, variant in variants:
         _require(variant, REQUIRED_VARIANT_FIELDS, f"directed_variants[{index}].", missing)
 
-    cases = manifest.get("evaluation_cases") or []
+    cases = _object_entries(manifest, "evaluation_cases", missing)
     if len(cases) < MIN_EVALUATION_CASES:
         missing.append(f"evaluation_cases: need >= {MIN_EVALUATION_CASES}, got {len(cases)}")
     present_negative_kinds = set()
-    for index, case in enumerate(cases):
+    for index, case in cases:
         _require(case, REQUIRED_EVALUATION_CASE_FIELDS, f"evaluation_cases[{index}].", missing)
         kind = case.get("kind")
         if kind in REQUIRED_NEGATIVE_CASE_KINDS:
