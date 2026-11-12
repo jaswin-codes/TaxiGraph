@@ -107,7 +107,8 @@ def check_tool_artifact(name: str, spec: dict, base_dir: Path) -> CheckResult:
         )
 
     actual_sha256 = _sha256_of(local_path)
-    if actual_sha256 != expected_sha256:
+    # Hex digests are case-insensitive; PowerShell's Get-FileHash prints uppercase.
+    if actual_sha256 != expected_sha256.strip().lower():
         return CheckResult(
             f"tool:{name}",
             False,
