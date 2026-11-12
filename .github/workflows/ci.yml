@@ -14,8 +14,13 @@ concurrency:
 
 jobs:
   test:
-    name: Feasibility spike tests
-    runs-on: ubuntu-24.04
+    # The spike is developed on Windows and has win32-only code (hidden console windows).
+    name: Feasibility spike tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
     timeout-minutes: 10
     defaults:
       run:
