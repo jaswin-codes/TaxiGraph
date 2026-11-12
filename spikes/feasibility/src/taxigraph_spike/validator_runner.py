@@ -39,6 +39,9 @@ def run_gtfs_validator(
         return ValidatorResult("error", f"feed zip not found at {feed_zip}")
 
     out_dir.mkdir(parents=True, exist_ok=True)
+    report_path = out_dir / "report.json"
+    # A report left by an earlier run must never be mistaken for this run's result.
+    report_path.unlink(missing_ok=True)
     args = [
         java_binary,
         "-jar",
@@ -56,15 +59,19 @@ def run_gtfs_validator(
     except subprocess.TimeoutExpired:
         return ValidatorResult("error", f"validator did not finish within {timeout_seconds}s")
 
-    report_path = out_dir / "report.json"
     if not report_path.is_file():
         return ValidatorResult(
             "error",
             f"validator exited {proc.returncode} but wrote no report.json; stderr: {proc.stderr[:500]!r}",
         )
 
-    with report_path.open("r", encoding="utf-8") as handle:
-        report = json.load(handle)
+    try:
+        with report_path.open("r", encoding="utf-8") as handle:
+            report = json.load(handle)
+    except ValueError as exc:
+        return ValidatorResult("error", f"report.json is not valid JSON: {exc}")
+    if not isinstance(report, dict):
+        return ValidatorResult("error", "report.json is not a JSON object")
 
     notices = report.get("notices", [])
     error_count = sum(1 for n in notices if n.get("severity") == "ERROR")
