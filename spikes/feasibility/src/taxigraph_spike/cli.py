@@ -15,10 +15,8 @@ from . import evaluation, gtfs_export, otp_runner, prerequisites, real_manifest,
 from .graphql_client import post_query, save_introspection
 
 BASE_DIR = Path(__file__).resolve().parents[2]
-TOOLS_MANIFEST_PATH = BASE_DIR / "tools-manifest.json"
 OUT_DIR = BASE_DIR / "out"
 GRAPHQL_URL = f"http://localhost:{otp_runner.LOOPBACK_PORT}{otp_runner.GRAPHQL_PATH}"
-PLAN_QUERY_PATH = BASE_DIR / "queries" / "plan-query.graphql"
 
 
 SOFT_OPTIONAL_TOOLS = {"tool:osm_extract"}
@@ -39,12 +37,15 @@ def _post_plan_query(query: str, variables: dict) -> dict:
 
 def run_smoke(base_dir: Path = BASE_DIR) -> report.CheckReport:
     details: dict = {}
+    out_dir = base_dir / "out"
+    tools_manifest_path = base_dir / "tools-manifest.json"
+    plan_query_path = base_dir / "queries" / "plan-query.graphql"
 
-    prereq = prerequisites.run_prerequisite_checks(base_dir, TOOLS_MANIFEST_PATH)
+    prereq = prerequisites.run_prerequisite_checks(base_dir, tools_manifest_path)
     details["prerequisites"] = [c.__dict__ for c in prereq.checks]
 
     network = synthetic_fixture.load_synthetic_network(synthetic_fixture.default_fixture_path())
-    gtfs_dir = OUT_DIR / "gtfs"
+    gtfs_dir = out_dir / "gtfs"
     export_result = gtfs_export.build_gtfs(network, gtfs_dir)
     details["gtfs_export"] = {
         "zip_path": str(export_result.zip_path),
@@ -63,7 +64,7 @@ def run_smoke(base_dir: Path = BASE_DIR) -> report.CheckReport:
             details=details,
         )
 
-    manifest = prerequisites.load_tools_manifest(TOOLS_MANIFEST_PATH)
+    manifest = prerequisites.load_tools_manifest(tools_manifest_path)
     java_binary = prerequisites.resolve_java_binary(base_dir, manifest)
     validator_jar = base_dir / manifest["tools"]["gtfs_validator"]["local_path"]
     otp_jar = base_dir / manifest["tools"]["otp"]["local_path"]
@@ -76,7 +77,7 @@ def run_smoke(base_dir: Path = BASE_DIR) -> report.CheckReport:
         )
 
     validator_result = validator_runner.run_gtfs_validator(
-        validator_jar, export_result.zip_path, OUT_DIR / "validator", java_binary=java_binary
+        validator_jar, export_result.zip_path, out_dir / "validator", java_binary=java_binary
     )
     details["validator"] = validator_result.__dict__
     if validator_result.status != "ok":
@@ -89,8 +90,8 @@ def run_smoke(base_dir: Path = BASE_DIR) -> report.CheckReport:
             details=details,
         )
 
-    build_dir = OUT_DIR / "otp-build"
-    graph_dir = OUT_DIR / "otp-graph"
+    build_dir = out_dir / "otp-build"
+    graph_dir = out_dir / "otp-graph"
     build_result = otp_runner.build_graph(
         otp_jar, export_result.zip_path, build_dir, graph_dir, osm_pbf=osm_pbf, java_binary=java_binary
     )
@@ -119,11 +120,11 @@ def run_smoke(base_dir: Path = BASE_DIR) -> report.CheckReport:
                 details=details,
             )
 
-        introspection = save_introspection(GRAPHQL_URL, OUT_DIR / "otp-schema" / "introspection.json")
+        introspection = save_introspection(GRAPHQL_URL, out_dir / "otp-schema" / "introspection.json")
         details["introspection_status"] = introspection.status
 
         cases = network["positive_cases"] + network["negative_controls"]
-        eval_result = evaluation.evaluate_cases(PLAN_QUERY_PATH, _post_plan_query, cases)
+        eval_result = evaluation.evaluate_cases(plan_query_path, _post_plan_query, cases)
         details["evaluation"] = {
             "status": eval_result.status,
             "detail": eval_result.detail,

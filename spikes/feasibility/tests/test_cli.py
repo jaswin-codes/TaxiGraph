@@ -69,3 +69,11 @@ def test_real_mode_blocked_with_incomplete_manifest(tmp_path: Path):
     assert data["real_data_status"] == "data_blocked"
     assert data["details"]["manifest_validation"]["status"] == "data_blocked"
     assert "source_rights_reference" in data["details"]["manifest_validation"]["missing"]
+
+
+def test_run_smoke_uses_base_dir_for_inputs_and_outputs(tmp_path: Path):
+    # An empty base_dir has no tools-manifest.json, so the run is blocked after the GTFS export.
+    result = cli.run_smoke(tmp_path)
+
+    assert result.software_status == "blocked"
+    assert (tmp_path / "out" / "gtfs" / "feed.zip").is_file()
