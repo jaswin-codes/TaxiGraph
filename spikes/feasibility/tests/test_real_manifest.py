@@ -91,3 +91,11 @@ def test_non_list_fields_are_reported_not_raised():
     manifest["directed_variants"] = "three variants"
     validation = real_manifest.validate_real_manifest(manifest)
     assert "directed_variants: must be a list" in validation.missing
+
+
+def test_duplicate_case_ids_are_rejected():
+    manifest = _complete_manifest()
+    manifest["evaluation_cases"][1]["case_id"] = manifest["evaluation_cases"][0]["case_id"]
+    validation = real_manifest.validate_real_manifest(manifest)
+    assert validation.status == "data_blocked"
+    assert any("duplicate case_id" in m and "case-0" in m for m in validation.missing)

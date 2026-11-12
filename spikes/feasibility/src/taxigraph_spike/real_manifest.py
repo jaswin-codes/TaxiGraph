@@ -113,6 +113,12 @@ def validate_real_manifest(manifest: Any) -> ManifestValidation:
     if missing_negative_kinds:
         missing.append(f"evaluation_cases: missing negative kinds {sorted(missing_negative_kinds)}")
 
+    # Repeating one case must not pad the corpus up to the required size.
+    case_ids = [c["case_id"] for _, c in cases if isinstance(c.get("case_id"), str)]
+    duplicate_ids = sorted({i for i in case_ids if case_ids.count(i) > 1})
+    if duplicate_ids:
+        missing.append(f"evaluation_cases: duplicate case_id {duplicate_ids}")
+
     rights = manifest.get("source_rights_reference")
     if isinstance(rights, str) and rights.strip().lower() in {"public url", "public portal", "todo"}:
         missing.append(
