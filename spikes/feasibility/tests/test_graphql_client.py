@@ -10,7 +10,11 @@ from taxigraph_spike import graphql_client
 def _serve(body: bytes):
     class Handler(BaseHTTPRequestHandler):
         def do_POST(self):
+            # Drain the request first: closing a socket with unread data sends a TCP reset
+            # on Windows, which the client sees as a dropped connection.
+            self.rfile.read(int(self.headers.get("Content-Length", 0)))
             self.send_response(200)
+            self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
 
